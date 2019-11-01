@@ -20,16 +20,17 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "eth.h"
+#include "i2c.h"
+#include "spi.h"
 #include "usart.h"
-#include "usb_otg.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <MPU_9255.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -156,6 +157,21 @@ void reportButtonState(buttonState_t btnSt){
   }
 }
 
+//覆寫MPU9255的延時函數
+void MPU_9255_delay(uint32_t ms){
+  HAL_Delay(ms);
+}
+
+//定義MPU9255的i2c讀指令
+uint8_t nmpu1_i2c_read(uint16_t DevAddress, uint8_t *pData, uint16_t size){
+  return HAL_I2C_Master_Receive(&hi2c1, DevAddress, pData, size, 100);
+}
+
+//定義MPU9255的i2c寫指令
+uint8_t nmpu1_i2c_write(uint16_t DevAddress, uint8_t *pData, uint16_t size){
+  return HAL_I2C_Master_Transmit(&hi2c1, DevAddress, pData, size, 100);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -165,7 +181,7 @@ void reportButtonState(buttonState_t btnSt){
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  double PI = atan(1) * 4;
   /* USER CODE END 1 */
   
 
@@ -187,48 +203,85 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ETH_Init();
   MX_USART3_UART_Init();
-  MX_USB_OTG_FS_PCD_Init();
+  MX_I2C1_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  printf("Hello World~~\r\n");
 
-  uint8_t msgCounter=0;
-  uint8_t ld1Counter=0;
-  uint16_t msgPauseRemaining = 0;
+  MPU_9255_t *nmpu = MPU_9255_new(
+      MPU9255_ADDRESS_AD0_1, //AD0為0時的i2c地址
+      SMPLRT_DIV_250Hz, 
+      MGT_100HZ, 
+      AFS_4G, 
+      GFS_250DPS, 
+      MFS_16BITS, 
+      nmpu1_i2c_read, //前面自己定義好的i2c寫指令
+      nmpu1_i2c_write //前面自己定義好的i2c讀指令
+  );
+
+	// Read WHO_AM_I register for MPU-9255
+	uint8_t ww = MPU_9255_whoami(nmpu); 
+	
+	if (ww == 0x73) // WHO_AM_I should always be 0x73
+	{  
+		printf("MPU9255 WHO_AM_I is 0x%x\n\r", ww);
+		printf("MPU9255 is online...\n\r");
+		HAL_Delay(1000);
+		
+		MPU_9255_initSensor(nmpu);
+		MPU_9255_printInfo(nmpu);
+	}
+	else
+	{
+		printf("Could not connect to MPU9255: \n\r");
+		printf("%#x \n",  ww);
+	}
+
+	float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
+	float temperature;
+	float yaw, pitch, roll;
+	float deltat = 0.0f;                      // integration interval for both filter schemes
+
+	int lastUpdate = 0, Now = 0;    // used to calculate integration interval                               // used to calculate integration interval
 
   while (1)
   {
-    //回報感應器讀值
-    if(msgPauseRemaining>0){
-      msgPauseRemaining--;
-    }else{
-      if(msgCounter++>50){
-        msgCounter=0;
-        printf("Sensor Readings : % 2.2f \r\n", getSensorReading() );
-      }
-    }
+ 		if(MPU_9255_isDataReady(nmpu)) {  							// On interrupt, check if data ready interrupt
+			MPU_9255_readAccelData(nmpu, &ax, &ay, &az);  	// Read the accel x/y/z adc values  
+			MPU_9255_readGyroData(nmpu, &gx, &gy, &gz);  	// Read the gyro x/y/z adc values
+			MPU_9255_readMagData(nmpu, &mx, &my, &mz);  		// Read the mag x/y/z adc values   
+		}
+		Now = lastUpdate + 100000;
+		deltat = (float)((Now - lastUpdate)/1000000.0f) ; // set integration time by time elapsed since last filter update
+		lastUpdate = Now;
+    HAL_Delay(100);
+    // Pass gyro rate as rad/s
+		// use delat as integration rate
+		MPU_9255_filterUpdate(nmpu, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, deltat);
+		
+//		printf(" ax = %f", 1000.0f*ax); 
+//		printf(" ay = %f", 1000.0f*ay); 
+//		printf(" az = %f  mg\n\r", 1000*az); 
+//			
+//		printf(" gx = %f", gx); 
+//		printf(" gy = %f", gy); 
+//		printf(" gz = %f  deg/s\n\r", gz); 
+//			
+//		printf(" mx = %f", mx); 
+//		printf(" my = %f", my); 
+//		printf(" mz = %f  mG\n\r", mz); 
 
-    //閃爍LED燈
-    if(ld1Counter++>20){
-      ld1Counter=0;
-      HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
-    }
-
-    //按鈕狀態判斷及回報
-    buttonState_t btnState = getButtonState();
-    if(btnState.isChange == isChanged){
-      msgPauseRemaining = 100;
-      HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, (GPIO_PinState) btnState.state);
-      reportButtonState(btnState);
-    }
-
-    HAL_Delay(10);
+		temperature = MPU_9255_readTempData(nmpu);  // Read the adc values
+		printf(" temperature = %f  C\n\r", temperature); 
+		
+		MPU_9255_getEulerDegreeFilter(nmpu, &yaw, &pitch, &roll);
+		//printf("Yaw, Pitch, Roll: %f %f %f\n\r", yaw, pitch, roll);
+		printf("Orientation: %f %f %f\n\r", yaw, pitch, roll);
 
     /* USER CODE END WHILE */
 
@@ -250,7 +303,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage 
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
@@ -258,9 +311,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 96;
+  RCC_OscInitStruct.PLL.PLLN = 216;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -277,16 +330,16 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
   {
     Error_Handler();
   }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_CLK48;
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_I2C1;
   PeriphClkInitStruct.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
-  PeriphClkInitStruct.Clk48ClockSelection = RCC_CLK48SOURCE_PLL;
+  PeriphClkInitStruct.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
