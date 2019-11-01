@@ -112,7 +112,7 @@ uint8_t MPU_9255_whoami(MPU_9255_t *hmpu){
 }
   
 
-float getEulerAngleSampleRate(MPU_9255_t *hmpu){
+double getEulerAngleSampleRate(MPU_9255_t *hmpu){
   return hmpu->sample_rate;
 }
 
@@ -191,7 +191,7 @@ void getRes(MPU_9255_t *hmpu){
   
 }
 
-void MPU_9255_readAccelData(MPU_9255_t *hmpu, float *ax, float *ay, float *az)
+void MPU_9255_readAccelData(MPU_9255_t *hmpu, double *ax, double *ay, double *az)
 {
   int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
   uint8_t rawData[6];  // x/y/z accel register data stored here
@@ -201,13 +201,13 @@ void MPU_9255_readAccelData(MPU_9255_t *hmpu, float *ax, float *ay, float *az)
   accelCount[2] = (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ; 
   
   // Now we'll calculate the accleration value into actual g's
-  *ax = (float)accelCount[0]* hmpu->aRes - hmpu->accelBias[0];  // get actual g value, this depends on scale being set
-  *ay = (float)accelCount[1]* hmpu->aRes - hmpu->accelBias[1];  
-  *az = (float)accelCount[2]* hmpu->aRes - hmpu->accelBias[2];  
+  *ax = (double)accelCount[0]* hmpu->aRes - hmpu->accelBias[0];  // get actual g value, this depends on scale being set
+  *ay = (double)accelCount[1]* hmpu->aRes - hmpu->accelBias[1];  
+  *az = (double)accelCount[2]* hmpu->aRes - hmpu->accelBias[2];  
       
 }
 
-void MPU_9255_readGyroData(MPU_9255_t *hmpu, float *gx, float *gy, float *gz)
+void MPU_9255_readGyroData(MPU_9255_t *hmpu, double *gx, double *gy, double *gz)
 {
   int16_t gyroCount[3]; // Stores the 16-bit signed gyro sensor output
   uint8_t rawData[6];   // x/y/z gyro register data stored here
@@ -216,12 +216,12 @@ void MPU_9255_readGyroData(MPU_9255_t *hmpu, float *gx, float *gy, float *gz)
   gyroCount[1] = (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;  
   gyroCount[2] = (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ; 
   // Calculate the gyro value into actual degrees per second
-  *gx = (float)gyroCount[0]* hmpu->gRes - hmpu->gyroBias[0];  // get actual gyro value, this depends on scale being set
-  *gy = (float)gyroCount[1]* hmpu->gRes - hmpu->gyroBias[1];  
-  *gz = (float)gyroCount[2]* hmpu->gRes - hmpu->gyroBias[2];   
+  *gx = (double)gyroCount[0]* hmpu->gRes - hmpu->gyroBias[0];  // get actual gyro value, this depends on scale being set
+  *gy = (double)gyroCount[1]* hmpu->gRes - hmpu->gyroBias[1];  
+  *gz = (double)gyroCount[2]* hmpu->gRes - hmpu->gyroBias[2];   
 }
 
-void MPU_9255_readMagData(MPU_9255_t *hmpu, float *mx, float *my, float *mz)
+void MPU_9255_readMagData(MPU_9255_t *hmpu, double *mx, double *my, double *mz)
 {
   int16_t magCount[3]; // Stores the 16-bit signed magnetometer sensor output
   uint8_t rawData[7];  // x/y/z gyro register data, ST2 register stored here, must read ST2 at end of data acquisition
@@ -237,20 +237,20 @@ void MPU_9255_readMagData(MPU_9255_t *hmpu, float *mx, float *my, float *mz)
       //mRes = -42200~42200 for 16 bit ADC
       //magCalibration = 0.5 ~ 1.5
       //magCount = -32768~32767
-      *mx = (float)magCount[0]*hmpu->mRes*hmpu->magCalibration[0] - hmpu->magbias[0];  // get actual magnetometer value, this depends on scale being set
-      *my = (float)magCount[1]*hmpu->mRes*hmpu->magCalibration[1] - hmpu->magbias[1];  
-      *mz = (float)magCount[2]*hmpu->mRes*hmpu->magCalibration[2] - hmpu->magbias[2];   
+      *mx = (double)magCount[0]*hmpu->mRes*hmpu->magCalibration[0] - hmpu->magbias[0];  // get actual magnetometer value, this depends on scale being set
+      *my = (double)magCount[1]*hmpu->mRes*hmpu->magCalibration[1] - hmpu->magbias[1];  
+      *mz = (double)magCount[2]*hmpu->mRes*hmpu->magCalibration[2] - hmpu->magbias[2];   
     }
   }
 }
 
-float MPU_9255_readTempData(MPU_9255_t *hmpu)
+double MPU_9255_readTempData(MPU_9255_t *hmpu)
 {
   int16_t tempCount;   // Stores the real internal chip temperature in degrees Celsius
   uint8_t rawData[2];  // x/y/z gyro register data stored here
   readBytes(hmpu, hmpu->addr, TEMP_OUT_H, 2, &rawData[0]);  // Read the two raw data registers sequentially into data array 
   tempCount = (int16_t)(((int16_t)rawData[0]) << 8 | rawData[1]); // Turn the MSB and LSB into a 16-bit value
-  return ((float) tempCount) / 333.87f + 21.0f;  // Temperature in degrees Centigrade
+  return ((double) tempCount) / 333.87f + 21.0f;  // Temperature in degrees Centigrade
 }
 
 
@@ -260,7 +260,7 @@ void resetMPU9255(MPU_9255_t *hmpu ) {
   MPU_9255_delay(0.1);
 }
   
-void initAK8963(MPU_9255_t *hmpu, float * destination){
+void initAK8963(MPU_9255_t *hmpu, double * destination){
   // First extract the factory calibration for each magnetometer axis
   uint8_t rawData[3];  // x/y/z gyro calibration data stored here
   writeByte(hmpu,AK8963_ADDRESS, AK8963_CNTL, 0x00); // Power down magnetometer  
@@ -270,9 +270,9 @@ void initAK8963(MPU_9255_t *hmpu, float * destination){
   readBytes(hmpu,AK8963_ADDRESS, AK8963_ASAX, 3, &rawData[0]);  // Read the x-, y-, and z-axis calibration values
   
   //-0.5~0.5 + 1.0 => 0.5 ~ 1.5
-  destination[0] =  (float)(rawData[0] - 128)/256.0f + 1.0f;   // Return x-axis sensitivity adjustment values, etc.
-  destination[1] =  (float)(rawData[1] - 128)/256.0f + 1.0f;  
-  destination[2] =  (float)(rawData[2] - 128)/256.0f + 1.0f; 
+  destination[0] =  (double)(rawData[0] - 128)/256.0f + 1.0f;   // Return x-axis sensitivity adjustment values, etc.
+  destination[1] =  (double)(rawData[1] - 128)/256.0f + 1.0f;  
+  destination[2] =  (double)(rawData[2] - 128)/256.0f + 1.0f; 
   writeByte(hmpu,AK8963_ADDRESS, AK8963_CNTL, 0x00); // Power down magnetometer  
   MPU_9255_delay(0.01);
   // Configure the magnetometer for continuous read and highest resolution
@@ -333,7 +333,7 @@ void initMPU9255(MPU_9255_t *hmpu ){
 
 // Function which accumulates gyro and accelerometer data after device initialization. It calculates the average
 // of the at-rest readings and then loads the resulting offsets into accelerometer and gyro bias registers.
-void calibrateMPU9255(MPU_9255_t *hmpu, float * dest1, float * dest2)
+void calibrateMPU9255(MPU_9255_t *hmpu, double * dest1, double * dest2)
 {  
   uint8_t data[12]; // data array to hold accelerometer and gyro x, y, z, data
   uint16_t ii, packet_count, fifo_count;
@@ -414,16 +414,16 @@ void calibrateMPU9255(MPU_9255_t *hmpu, float * dest1, float * dest2)
   data[5] = (-gyro_bias[2]/4)       & 0xFF;
 
 /// Push gyro biases to hardware registers
-/*  writeByte(hmpu,hmpu->addr, XG_OFFSET_H, data[0]);
+  writeByte(hmpu,hmpu->addr, XG_OFFSET_H, data[0]);
   writeByte(hmpu,hmpu->addr, XG_OFFSET_L, data[1]);
   writeByte(hmpu,hmpu->addr, YG_OFFSET_H, data[2]);
   writeByte(hmpu,hmpu->addr, YG_OFFSET_L, data[3]);
   writeByte(hmpu,hmpu->addr, ZG_OFFSET_H, data[4]);
   writeByte(hmpu,hmpu->addr, ZG_OFFSET_L, data[5]);
-*/
-  dest1[0] = (float) gyro_bias[0]/(float) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
-  dest1[1] = (float) gyro_bias[1]/(float) gyrosensitivity;
-  dest1[2] = (float) gyro_bias[2]/(float) gyrosensitivity;
+
+  dest1[0] = (double) gyro_bias[0]/(double) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
+  dest1[1] = (double) gyro_bias[1]/(double) gyrosensitivity;
+  dest1[2] = (double) gyro_bias[2]/(double) gyrosensitivity;
 
 // Construct the accelerometer biases for push to the hardware accelerometer bias registers. These registers contain
 // factory trim values which must be added to the calculated accelerometer biases; on boot up these registers will hold
@@ -464,27 +464,28 @@ void calibrateMPU9255(MPU_9255_t *hmpu, float * dest1, float * dest2)
 // Apparently this is not working for the acceleration biases in the MPU-9255
 // Are we handling the temperature correction bit properly?
 // Push accelerometer biases to hardware registers
-/*  writeByte(hmpu,hmpu->addr, XA_OFFSET_H, data[0]);
+  
+  writeByte(hmpu,hmpu->addr, XA_OFFSET_H, data[0]);
   writeByte(hmpu,hmpu->addr, XA_OFFSET_L, data[1]);
   writeByte(hmpu,hmpu->addr, YA_OFFSET_H, data[2]);
   writeByte(hmpu,hmpu->addr, YA_OFFSET_L, data[3]);
   writeByte(hmpu,hmpu->addr, ZA_OFFSET_H, data[4]);
   writeByte(hmpu,hmpu->addr, ZA_OFFSET_L, data[5]);
-*/
+
 // Output scaled accelerometer biases for manual subtraction in the main program
-  dest2[0] = (float)accel_bias[0]/(float)accelsensitivity; 
-  dest2[1] = (float)accel_bias[1]/(float)accelsensitivity;
-  dest2[2] = (float)accel_bias[2]/(float)accelsensitivity;
+  dest2[0] = (double)accel_bias[0]/(double)accelsensitivity; 
+  dest2[1] = (double)accel_bias[1]/(double)accelsensitivity;
+  dest2[2] = (double)accel_bias[2]/(double)accelsensitivity;
 }
 
 
 // Accelerometer and gyroscope self test; check calibration wrt factory settings
-void MPU9255SelfTest(MPU_9255_t *hmpu, float * destination) // Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
+void MPU9255SelfTest(MPU_9255_t *hmpu, double * destination) // Should return percent deviation from factory trim values, +/- 14 or less deviation is a pass
 {
   uint8_t rawData[6] = {0, 0, 0, 0, 0, 0};
   uint8_t selfTest[6];
   int16_t gAvg[3], aAvg[3], aSTAvg[3], gSTAvg[3];
-  float factoryTrim[6];
+  double factoryTrim[6];
   uint8_t FS = 0;
 
   writeByte(hmpu,hmpu->addr, SMPLRT_DIV, 0x00); // Set gyro sample rate to 1 kHz �����W�v
@@ -493,14 +494,14 @@ void MPU9255SelfTest(MPU_9255_t *hmpu, float * destination) // Should return per
   writeByte(hmpu,hmpu->addr, ACCEL_CONFIG2, 0x02); // Set accelerometer rate to 1 kHz and bandwidth to 92 Hz
   writeByte(hmpu,hmpu->addr, ACCEL_CONFIG, 1<<FS); // Set full scale range for the accelerometer to 2 g
 
-  //Ū��ʵ��ثe�P�����Ȩ�����
+  //讀兩百筆目前感測器值取平均
   for( int ii = 0; ii < 200; ii++) { // get average current values of gyro and acclerometer
-    //Ū�[�t�׭�
+    //讀加速度值
     readBytes(hmpu,hmpu->addr, ACCEL_XOUT_H, 6, &rawData[0]); // Read the six raw data registers into data array
     aAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
     aAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
     aAvg[2] += (int16_t)(((int16_t)rawData[4] << 8) | rawData[5]) ;
-    //Ū��������
+    //讀陀螺儀值
     readBytes(hmpu,hmpu->addr, GYRO_XOUT_H, 6, &rawData[0]); // Read the six raw data registers sequentially into data array
     gAvg[0] += (int16_t)(((int16_t)rawData[0] << 8) | rawData[1]) ; // Turn the MSB and LSB into a signed 16-bit value
     gAvg[1] += (int16_t)(((int16_t)rawData[2] << 8) | rawData[3]) ;
@@ -535,7 +536,7 @@ void MPU9255SelfTest(MPU_9255_t *hmpu, float * destination) // Should return per
     gSTAvg[ii] /= 200;
   }
   
-
+  //切回一般感測資料模式
   // Configure the gyro and accelerometer for normal operation
   writeByte(hmpu,hmpu->addr, ACCEL_CONFIG, 0x00);
   writeByte(hmpu,hmpu->addr, GYRO_CONFIG, 0x00);
@@ -550,18 +551,18 @@ void MPU9255SelfTest(MPU_9255_t *hmpu, float * destination) // Should return per
   selfTest[5] = readByte(hmpu,hmpu->addr, SELF_TEST_Z_GYRO); // Z-axis gyro self-test results
 
   // Retrieve factory self-test value from self-test code reads
-  factoryTrim[0] = (float)(2620/1<<FS)*(pow( 1.01f , ((float)selfTest[0] - 1.0f) )); // FT[Xa] factory trim calculation
-  factoryTrim[1] = (float)(2620/1<<FS)*(pow( 1.01f , ((float)selfTest[1] - 1.0f) )); // FT[Ya] factory trim calculation
-  factoryTrim[2] = (float)(2620/1<<FS)*(pow( 1.01f , ((float)selfTest[2] - 1.0f) )); // FT[Za] factory trim calculation
-  factoryTrim[3] = (float)(2620/1<<FS)*(pow( 1.01f , ((float)selfTest[3] - 1.0f) )); // FT[Xg] factory trim calculation
-  factoryTrim[4] = (float)(2620/1<<FS)*(pow( 1.01f , ((float)selfTest[4] - 1.0f) )); // FT[Yg] factory trim calculation
-  factoryTrim[5] = (float)(2620/1<<FS)*(pow( 1.01f , ((float)selfTest[5] - 1.0f) )); // FT[Zg] factory trim calculation
+  factoryTrim[0] = (double)(2620/1<<FS)*(pow( 1.01f , ((double)selfTest[0] - 1.0f) )); // FT[Xa] factory trim calculation
+  factoryTrim[1] = (double)(2620/1<<FS)*(pow( 1.01f , ((double)selfTest[1] - 1.0f) )); // FT[Ya] factory trim calculation
+  factoryTrim[2] = (double)(2620/1<<FS)*(pow( 1.01f , ((double)selfTest[2] - 1.0f) )); // FT[Za] factory trim calculation
+  factoryTrim[3] = (double)(2620/1<<FS)*(pow( 1.01f , ((double)selfTest[3] - 1.0f) )); // FT[Xg] factory trim calculation
+  factoryTrim[4] = (double)(2620/1<<FS)*(pow( 1.01f , ((double)selfTest[4] - 1.0f) )); // FT[Yg] factory trim calculation
+  factoryTrim[5] = (double)(2620/1<<FS)*(pow( 1.01f , ((double)selfTest[5] - 1.0f) )); // FT[Zg] factory trim calculation
 
   // Report results as a ratio of (STR - FT)/FT; the change from Factory Trim of the Self-Test Response
   // To get percent, must multiply by 100
   for (int i = 0; i < 3; i++) {
-    destination[i] = 100.0f*((float)(aSTAvg[i] - aAvg[i]))/factoryTrim[i]; // Report percent differences
-    destination[i+3] = 100.0f*((float)(gSTAvg[i] - gAvg[i]))/factoryTrim[i+3]; // Report percent differences
+    destination[i] = 100.0f*((double)(aSTAvg[i] - aAvg[i]))/factoryTrim[i]; // Report percent differences
+    destination[i+3] = 100.0f*((double)(gSTAvg[i] - gAvg[i]))/factoryTrim[i+3]; // Report percent differences
   }
    
 }
@@ -602,8 +603,8 @@ void MPU_9255_printInfo(MPU_9255_t *hmpu){
     printf("MPU9255 initialized for active data mode....\n\r"); // Initialize device for active mode read of acclerometer, gyroscope, and temperature
   
     printf("AK8963 initialized for active data mode....\n\r"); // Initialize device for active mode read of magnetometer
-    printf("Accelerometer full-scale range = %f  g\n\r", 2.0f*(float)(1<<hmpu->Ascale));
-    printf("Gyroscope full-scale range = %f  deg/s\n\r", 250.0f*(float)(1<<hmpu->Gscale));
+    printf("Accelerometer full-scale range = %f  g\n\r", 2.0f*(double)(1<<hmpu->Ascale));
+    printf("Gyroscope full-scale range = %f  deg/s\n\r", 250.0f*(double)(1<<hmpu->Gscale));
     if(hmpu->Mscale == 0) printf("Magnetometer resolution = 14  bits\n\r");
     else if(hmpu->Mscale == 1) printf("Magnetometer resolution = 16  bits\n\r");
     if(hmpu->Mmode == 2) printf("Magnetometer ODR = 8 Hz\n\r");
@@ -624,22 +625,22 @@ uint8_t MPU_9255_isDataReady(MPU_9255_t *hmpu){
 // device orientation -- which can be converted to yaw, pitch, and roll. Useful for stabilizing quadcopters, etc.
 // The performance of the orientation filter is at least as good as conventional Kalman-based filtering algorithms
 // but is much less computationally intensive---it can be performed on a 3.3 V Pro Mini operating at 8 MHz!
-void MPU_9255_filterUpdate(MPU_9255_t *hmpu, float gx, float gy, float gz, float ax, float ay, float az, float deltat)
+void MPU_9255_filterUpdate(MPU_9255_t *hmpu, double gx, double gy, double gz, double ax, double ay, double az, double deltat)
 {
   // Local system variables
-  float norm;                                                            // vector norm
-  float SEqDot_omega_1, SEqDot_omega_2, SEqDot_omega_3, SEqDot_omega_4;  // quaternion derrivative from gyroscopes elements
-  float f_1, f_2, f_3;                                                   // objective function elements
-  float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33;              // objective function Jacobian elements
-  float SEqHatDot_1, SEqHatDot_2, SEqHatDot_3, SEqHatDot_4;              // estimated direction of the gyroscope error
+  double norm;                                                            // vector norm
+  double SEqDot_omega_1, SEqDot_omega_2, SEqDot_omega_3, SEqDot_omega_4;  // quaternion derrivative from gyroscopes elements
+  double f_1, f_2, f_3;                                                   // objective function elements
+  double J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33;              // objective function Jacobian elements
+  double SEqHatDot_1, SEqHatDot_2, SEqHatDot_3, SEqHatDot_4;              // estimated direction of the gyroscope error
   // Axulirary variables to avoid reapeated calcualtions
-  float halfSEq_1 = 0.5f * hmpu->SEq_1;
-  float halfSEq_2 = 0.5f * hmpu->SEq_2;
-  float halfSEq_3 = 0.5f * hmpu->SEq_3;
-  float halfSEq_4 = 0.5f * hmpu->SEq_4;
-  float twoSEq_1 = 2.0f * hmpu->SEq_1;
-  float twoSEq_2 = 2.0f * hmpu->SEq_2;
-  float twoSEq_3 = 2.0f * hmpu->SEq_3;
+  double halfSEq_1 = 0.5f * hmpu->SEq_1;
+  double halfSEq_2 = 0.5f * hmpu->SEq_2;
+  double halfSEq_3 = 0.5f * hmpu->SEq_3;
+  double halfSEq_4 = 0.5f * hmpu->SEq_4;
+  double twoSEq_1 = 2.0f * hmpu->SEq_1;
+  double twoSEq_2 = 2.0f * hmpu->SEq_2;
+  double twoSEq_3 = 2.0f * hmpu->SEq_3;
   
   // Normalise the accelerometer measurement
   norm = sqrt(ax * ax + ay * ay + az * az);
@@ -684,7 +685,7 @@ void MPU_9255_filterUpdate(MPU_9255_t *hmpu, float gx, float gy, float gz, float
   hmpu->SEq_3 /= norm;
   hmpu->SEq_4 /= norm;
 }
-void MPU_9255_getEulerDegreeFilter(MPU_9255_t *hmpu, float *yaw, float *pitch, float *roll){
+void MPU_9255_getEulerDegreeFilter(MPU_9255_t *hmpu, double *yaw, double *pitch, double *roll){
   
   // Define output variables from updated quaternion---these are Tait-Bryan angles, commonly used in aircraft orientation.
   // In this coordinate system, the positive z-axis is down toward Earth. 

@@ -62,24 +62,24 @@ typedef struct{
   MMODE_t       Mmode;   		// Either 8 Hz 0x02) or 100 Hz (0x06) magnetometer data ODR 
   SMPLRT_DIV_t  Smplrt_div;	//sample_rate = Internal_Sample_Rate / (1 + SMPLRT_DIV)
 
-  float aRes;
-  float gRes;
-  float mRes; // scale resolutions per LSB for the sensors
+  double aRes;
+  double gRes;
+  double mRes; // scale resolutions per LSB for the sensors
 
   // parameters for 6 DoF sensor fusion calculations
-  float magCalibration[3];
-  float magbias[3];  // Factory mag calibration and mag bias
-  float gyroBias[3];
-  float accelBias[3]; // Bias corrections for gyro and accelerometer
-  float SelfTest[6];
+  double magCalibration[3];
+  double magbias[3];  // Factory mag calibration and mag bias
+  double gyroBias[3];
+  double accelBias[3]; // Bias corrections for gyro and accelerometer
+  double SelfTest[6];
 
   //quaternion
-  float q[4];           // vector to hold quaternion
-  float eInt[3];              // vector to hold integral error for Mahony method
-  float SEq_1;
-  float SEq_2;
-  float SEq_3;
-  float SEq_4; // estimated orientation quaternion elements with initial conditions
+  double q[4];           // vector to hold quaternion
+  double eInt[3];              // vector to hold integral error for Mahony method
+  double SEq_1;
+  double SEq_2;
+  double SEq_3;
+  double SEq_4; // estimated orientation quaternion elements with initial conditions
   MPU_9255_i2cTransiver_t writer;
   MPU_9255_i2cTransiver_t reader;
   uint8_t addr;
@@ -92,13 +92,13 @@ uint8_t     MPU_9255_whoami(MPU_9255_t *hmpu);
 void        MPU_9255_initSensor(MPU_9255_t *hmpu);
 void        MPU_9255_printInfo(MPU_9255_t *hmpu);
 uint8_t     MPU_9255_isDataReady(MPU_9255_t *hmpu);
-void        MPU_9255_readAccelData(MPU_9255_t *hmpu, float *ax, float *ay, float *az);
-void        MPU_9255_readGyroData(MPU_9255_t *hmpu, float *gx, float *gy, float *gz);
-void        MPU_9255_readMagData(MPU_9255_t *hmpu, float *mx, float *my, float *mz);
-void        MPU_9255_filterUpdate(MPU_9255_t *hmpu, float gx, float gy, float gz, 
-                                          float ax, float ay, float az, float deltat);
-void        MPU_9255_getEulerDegreeFilter(MPU_9255_t *hmpu, float *yaw, float *pitch, float *roll);
-float       MPU_9255_readTempData(MPU_9255_t *hmpu);
+void        MPU_9255_readAccelData(MPU_9255_t *hmpu, double *ax, double *ay, double *az);
+void        MPU_9255_readGyroData(MPU_9255_t *hmpu, double *gx, double *gy, double *gz);
+void        MPU_9255_readMagData(MPU_9255_t *hmpu, double *mx, double *my, double *mz);
+void        MPU_9255_filterUpdate(MPU_9255_t *hmpu, double gx, double gy, double gz, 
+                                          double ax, double ay, double az, double deltat);
+void        MPU_9255_getEulerDegreeFilter(MPU_9255_t *hmpu, double *yaw, double *pitch, double *roll);
+double       MPU_9255_readTempData(MPU_9255_t *hmpu);
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions prototypes ---------------------------------------------*/

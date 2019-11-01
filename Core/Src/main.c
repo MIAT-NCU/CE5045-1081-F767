@@ -22,6 +22,7 @@
 #include "main.h"
 #include "i2c.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -31,6 +32,8 @@
 #include <stdlib.h>
 #include <MPU_9255.h>
 #include <math.h>
+#include <stdlib.h>
+#include "tim.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -102,7 +105,7 @@ void SystemClock_Config(void);
   */
 double sensorVariation(){
   double inc = rand();
-  inc = (inc / RAND_MAX) - 0.5;
+  inc = (inc / RAND_MAX ) - 0.5;
   return inc;
 }
 
@@ -206,8 +209,9 @@ int main(void)
   MX_USART3_UART_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -242,12 +246,13 @@ int main(void)
 		printf("%#x \n",  ww);
 	}
 
-	float ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
-	float temperature;
-	float yaw, pitch, roll;
-	float deltat = 0.0f;                      // integration interval for both filter schemes
+	double ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
+	double temperature;
+	double yaw, pitch, roll;
+	double deltat = 0.0f;                      // integration interval for both filter schemes
 
-	int lastUpdate = 0, Now = 0;    // used to calculate integration interval                               // used to calculate integration interval
+  int lastUpdate = tim3GetUs();
+  int Now = 0; // used to calculate integration interval                               // used to calculate integration interval
 
   while (1)
   {
@@ -256,10 +261,9 @@ int main(void)
 			MPU_9255_readGyroData(nmpu, &gx, &gy, &gz);  	// Read the gyro x/y/z adc values
 			MPU_9255_readMagData(nmpu, &mx, &my, &mz);  		// Read the mag x/y/z adc values   
 		}
-		Now = lastUpdate + 100000;
-		deltat = (float)((Now - lastUpdate)/1000000.0f) ; // set integration time by time elapsed since last filter update
+		Now = tim3GetUs();
+		deltat = ((double)(Now - lastUpdate))/1000000.0f ; // set integration time by time elapsed since last filter update
 		lastUpdate = Now;
-    HAL_Delay(100);
     // Pass gyro rate as rad/s
 		// use delat as integration rate
 		MPU_9255_filterUpdate(nmpu, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, deltat);
@@ -277,7 +281,7 @@ int main(void)
 //		printf(" mz = %f  mG\n\r", mz); 
 
 		temperature = MPU_9255_readTempData(nmpu);  // Read the adc values
-		printf(" temperature = %f  C\n\r", temperature); 
+		//printf(" temperature = %f  C\n\r", temperature); 
 		
 		MPU_9255_getEulerDegreeFilter(nmpu, &yaw, &pitch, &roll);
 		//printf("Yaw, Pitch, Roll: %f %f %f\n\r", yaw, pitch, roll);
@@ -311,7 +315,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 216;
+  RCC_OscInitStruct.PLL.PLLN = 200;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -333,7 +337,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_6) != HAL_OK)
   {
     Error_Handler();
   }
