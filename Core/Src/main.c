@@ -153,6 +153,7 @@ int main(void)
   MX_SPI1_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim3);
 
   /* USER CODE END 2 */
 
@@ -174,22 +175,27 @@ int main(void)
   connecting_MPU_9255(nmpu);
 
   double ax, ay, az, gx, gy, gz, mx, my, mz; // variables to hold latest sensor data values 
-  double temperature;
+  
+  const double PI = atan(1) * 4;
+	double yaw, pitch, roll;
+	double deltat = 0.0f;                      // integration interval for both filter schemes
+  volatile uint32_t lastUpdate = tim3GetUs();
+  volatile uint32_t Now = 0; // used to calculate integration interval                               // used to calculate integration interval
 
   while (1)
   {
-    HAL_Delay(250);
-    if(MPU_9255_isDataReady(nmpu)) {                // On interrupt, check if data ready interrupt
-      MPU_9255_readAccelData(nmpu, &ax, &ay, &az);    // Read the accel x/y/z adc values  
-      MPU_9255_readGyroData(nmpu, &gx, &gy, &gz);    // Read the gyro x/y/z adc values
-      MPU_9255_readMagData(nmpu, &mx, &my, &mz);      // Read the mag x/y/z adc values
-      temperature = MPU_9255_readTempData(nmpu);  // Read the adc values
+    if(MPU_9255_isDataReady(nmpu)) {  							// On interrupt, check if data ready interrupt
+			MPU_9255_readAccelData(nmpu, &ax, &ay, &az);  	// Read the accel x/y/z adc values  
+			MPU_9255_readGyroData(nmpu, &gx, &gy, &gz);  	// Read the gyro x/y/z adc values
+			MPU_9255_readMagData(nmpu, &mx, &my, &mz);  		// Read the mag x/y/z adc values
+      Now = tim3GetUs();
+      deltat = ((double)(Now - lastUpdate))/1000000.0f ; // set integration time by time elapsed since last filter update
+      lastUpdate = Now;
 
-      printf(" ax = %f, ay = %f, az = %f  mg\n\r", 1000.0f*ax, 1000.0f*ay, 1000.0f*az);       
-      printf(" gx = %f, gy = %f, gz = %f  deg/s\n\r", gx, gy, gz);       
-      printf(" mx = %f, my = %f, mz = %f  mG\n\r", mx, my, mz); 
-      printf(" temperature = %f  C\n\r\n\r", temperature); 
-    }
+      MPU_9255_filterUpdate(nmpu, gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, deltat);
+			MPU_9255_getEulerDegreeFilter(nmpu, &yaw, &pitch, &roll);
+      printf("Orientation: %f %f %f\n\r", yaw, pitch, roll);
+		}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
